@@ -1,20 +1,20 @@
 from fastapi import FastAPI
-from app.core.database import engine, Base
-from app.models.user import User
-from app.models.category import Category
-from app.models.subcategory import SubCategory
-from app.models.products import Product
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers.user import router as user_router
+from app.core.config import settings
+from app.routers.auth import router as auth_router
 
-app=FastAPI()
+app = FastAPI(title=settings.app_name)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.include_router(auth_router)
 
-Base.metadata.create_all(bind=engine)
 
-app.include_router(user_router)
-
-@app.get('/')
-def home():
-    return {
-        "message":"welcome"
-    }
+@app.get("/health")
+def health():
+    return {"status": "ok"}
