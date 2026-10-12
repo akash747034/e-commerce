@@ -111,6 +111,26 @@ class Order(TimestampMixin, Base):
         nullable=False,
     )
 
+    billing_address_id: Mapped[int | None] = mapped_column(
+        ForeignKey("addresses.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
+    coupon_id: Mapped[int | None] = mapped_column(
+        ForeignKey("coupons.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    notes: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+
+    cancellation_reason: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
     user: Mapped["User"] = relationship(
         back_populates="orders",
     )
@@ -121,4 +141,6 @@ class Order(TimestampMixin, Base):
         passive_deletes=True,
     )
 
-    shipping_address: Mapped["Address"] = relationship()
+    shipping_address: Mapped["Address"] = relationship(foreign_keys=[shipping_address_id])
+    billing_address: Mapped["Address | None"] = relationship(foreign_keys=[billing_address_id])
+    coupon: Mapped["Coupon | None"] = relationship()

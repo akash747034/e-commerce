@@ -46,6 +46,16 @@ class OrderItem(TimestampMixin, Base):
         index=True,
     )
 
+    variant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    # Snapshots of names at order time so future product updates don't alter order history
+    product_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    variant_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     quantity: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -82,3 +92,4 @@ class OrderItem(TimestampMixin, Base):
     )
 
     product: Mapped["Product"] = relationship()
+    variant: Mapped["ProductVariant | None"] = relationship()

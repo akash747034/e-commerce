@@ -36,6 +36,12 @@ class CartItem(TimestampMixin, Base):
         index=True,
     )
 
+    variant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     quantity: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -49,3 +55,4 @@ class CartItem(TimestampMixin, Base):
     )
 
     product: Mapped["Product"] = relationship()
+    variant: Mapped["ProductVariant | None"] = relationship()

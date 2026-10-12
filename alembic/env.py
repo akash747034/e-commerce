@@ -5,7 +5,24 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 from app.core.config import settings
 from app.core.database import Base
-from app.models import address, category, product, sub_category, user,product_image, order, order_item, cart, cart_item  # noqa: F401
+from app.models import (  # noqa: F401
+    address,
+    brand,
+    cart,
+    cart_item,
+    category,
+    coupon,
+    notification,
+    order,
+    order_item,
+    product,
+    product_image,
+    product_variant,
+    review,
+    sub_category,
+    user,
+    wishlist,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
