@@ -20,3 +20,4 @@ class Product(TimestampMixin, Base):
 
     category: Mapped["Category"] = relationship(back_populates="products")
     subcategory: Mapped["SubCategory"] = relationship(back_populates="products")
+    product_images: Mapped[list["ProductImage"]] = relationship(back_populates="product",cascade="all, delete-orphan")
