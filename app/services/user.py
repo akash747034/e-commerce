@@ -3,9 +3,15 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    verify_password,
+    verify_refresh_token,
+)
 from app.models.user import User
-from app.schemas.user import LoginPayload, UserCreate
+from app.schemas.user import LoginPayload, RefreshTokenPayload, UserCreate
 
 
 def register(payload: UserCreate, db: Session) -> User:
@@ -33,5 +39,19 @@ def login(payload: LoginPayload, db: Session) -> dict:
         "name": user.name,
         "email": user.email,
         "access_token": create_access_token(str(user.id)),
+        "refresh_token": create_refresh_token(str(user.id)),
+        "token_type": "bearer",
+    }
+
+
+def refresh_token(payload: RefreshTokenPayload, db: Session) -> dict:
+    user_id = verify_refresh_token(payload.refresh_token)
+    user = db.scalars(select(User).where(User.id == int(user_id))).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    return {
+        "access_token": create_access_token(str(user.id)),
+        "refresh_token": create_refresh_token(str(user.id)),
         "token_type": "bearer",
     }

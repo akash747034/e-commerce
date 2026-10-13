@@ -26,10 +26,39 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(subject: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
     return jwt.encode(
-        {"sub": subject, "exp": expire},
+        {"sub": subject, "type": "access", "exp": expire},
         settings.secret_key,
         algorithm=settings.algorithm,
     )
+
+
+def create_refresh_token(subject: str) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
+    return jwt.encode(
+        {"sub": subject, "type": "refresh", "exp": expire},
+        settings.secret_key,
+        algorithm=settings.algorithm,
+    )
+
+
+def verify_refresh_token(token: str) -> str:
+    try:
+        data = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=[settings.algorithm],
+        )
+        if data.get("type") != "refresh":
+            raise jwt.InvalidTokenError
+        user_id = data.get("sub")
+        if not user_id:
+            raise jwt.InvalidTokenError
+        return str(user_id)
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
 
 
 def get_current_user(
@@ -43,7 +72,7 @@ def get_current_user(
             algorithms=[settings.algorithm],
         )
         user_id = data.get("sub")
-        if not user_id:
+        if not user_id or data.get("type") == "refresh":
             raise jwt.InvalidTokenError
     except jwt.InvalidTokenError:
         raise HTTPException(
