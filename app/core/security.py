@@ -84,4 +84,56 @@ def get_current_user(
     user = db.scalars(select(User).where(User.id == int(user_id))).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    if user.status != "active":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your account is inactive")
     return user
+
+
+# ---------------------------------------------------------------------------
+# Role-based dependency guards
+# ---------------------------------------------------------------------------
+
+def _require_role(*allowed_roles: str):
+    """Factory that returns a FastAPI dependency enforcing one of the given roles."""
+    def dependency(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.user_type not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied. Required role: {' or '.join(allowed_roles)}.",
+            )
+        return current_user
+    return dependency
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Allow only admins."""
+    if current_user.user_type != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Admins only.",
+        )
+    return current_user
+
+
+def require_seller(current_user: User = Depends(get_current_user)) -> User:
+    """Allow only sellers."""
+    if current_user.user_type != "seller":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Sellers only.",
+        )
+    return current_user
+
+
+def require_customer(current_user: User = Depends(get_current_user)) -> User:
+    """Allow only customers."""
+    if current_user.user_type != "customer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Customers only.",
+        )
+    return current_user
+
+
+# Convenience: admin OR seller (e.g. product management)
+require_admin_or_seller = _require_role("admin", "seller")
