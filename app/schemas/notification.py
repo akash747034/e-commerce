@@ -1,0 +1,13 @@
+from pydantic import BaseModel, ConfigDict
+
+
+class NotificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    title: str
+    message: str
+    notification_type: str
+    is_read: bool
+    action_url: str | None

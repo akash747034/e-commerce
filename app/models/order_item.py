@@ -23,12 +23,16 @@ class OrderItem(TimestampMixin, Base):
             name="ck_order_items_quantity_positive",
         ),
         CheckConstraint(
-            "price >= 0 AND selling_price >= 0",
+            "mrp >= 0 AND selling_price >= 0",
             name="ck_order_items_prices_nonnegative",
         ),
         CheckConstraint(
-            "total_price >= 0",
+            "line_total >= 0",
             name="ck_order_items_total_nonnegative",
+        ),
+        CheckConstraint(
+            "item_discount >= 0",
+            name="ck_order_items_item_discount_nonnegative",
         ),
     )
 
@@ -61,20 +65,28 @@ class OrderItem(TimestampMixin, Base):
         nullable=False,
     )
 
-    # Regular price per unit at checkout
-    price: Mapped[Decimal] = mapped_column(
+    # MRP / original listed price per unit (compare_at_price if set, else product.price)
+    mrp: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
         nullable=False,
     )
 
-    # Actual price per unit after product discount
+    # Actual price per unit the customer pays (after product-level discount)
     selling_price: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
         nullable=False,
     )
 
-    # Final line total after item-level discounts
-    total_price: Mapped[Decimal] = mapped_column(
+    # Total product-level discount for this line: (mrp - selling_price) * quantity
+    item_discount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2),
+        nullable=False,
+        default=Decimal("0"),
+        server_default=text("0"),
+    )
+
+    # selling_price * quantity  (line subtotal before coupon discount)
+    line_total: Mapped[Decimal] = mapped_column(
         Numeric(12, 2),
         nullable=False,
     )

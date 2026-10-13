@@ -8,12 +8,10 @@ from app.core.database import Base, TimestampMixin
 
 class ProductVariant(TimestampMixin, Base):
     __tablename__ = "product_variants"
-
     __table_args__ = (
         CheckConstraint("quantity >= 0", name="ck_product_variants_quantity_nonnegative"),
         CheckConstraint("price IS NULL OR price >= 0", name="ck_product_variants_price_nonnegative"),
     )
-
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     product_id: Mapped[int] = mapped_column(
         ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True
