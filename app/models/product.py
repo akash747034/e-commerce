@@ -22,10 +22,12 @@ class Product(TimestampMixin, Base):
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), index=True, nullable=False)
     subcategory_id: Mapped[int] = mapped_column(ForeignKey("subcategories.id"), index=True, nullable=False)
     brand_id: Mapped[int | None] = mapped_column(ForeignKey("brands.id", ondelete="SET NULL"), index=True, nullable=True)
+    seller_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
 
     category: Mapped["Category"] = relationship(back_populates="products")
     subcategory: Mapped["SubCategory"] = relationship(back_populates="products")
     brand: Mapped["Brand | None"] = relationship(back_populates="products")
+    seller: Mapped["User | None"] = relationship()
     product_images: Mapped[list["ProductImage"]] = relationship(back_populates="product", cascade="all, delete-orphan")
     variants: Mapped[list["ProductVariant"]] = relationship(back_populates="product", cascade="all, delete-orphan")
     reviews: Mapped[list["Review"]] = relationship(back_populates="product", cascade="all, delete-orphan")

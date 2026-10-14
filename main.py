@@ -3,17 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
-from app.routers.address import router as address_router
+from app.routers.admin import router as admin_router
 from app.routers.auth import router as auth_router
-from app.routers.brand import router as brand_router
-from app.routers.cart import router as cart_router
-from app.routers.category import router as category_router
-from app.routers.notification import router as notification_router
-from app.routers.order import router as order_router
-from app.routers.product import router as product_router
-from app.routers.review import router as review_router
+from app.routers.catalog import router as catalog_router
+from app.routers.customer import router as customer_router
 from app.routers.user import router as user_router
-from app.routers.wishlist import router as wishlist_router
 from app.schemas.response import ApiResponse
 
 app = FastAPI(title=settings.app_name)
@@ -29,25 +23,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auth
-app.include_router(auth_router)
-# User & profile
-app.include_router(user_router)
-app.include_router(address_router)
-
-# Catalogue
-app.include_router(category_router)
-app.include_router(brand_router)
-app.include_router(product_router)
-
-# Shopping
-app.include_router(cart_router)
-app.include_router(order_router)
-
-# Engagement
-app.include_router(review_router)
-app.include_router(wishlist_router)
-app.include_router(notification_router)
+# Domain-Driven Modular Routers
+app.include_router(auth_router)       # /auth (login, register, refresh)
+app.include_router(user_router)       # /users/me (profile, addresses - shared by any authenticated user)
+app.include_router(catalog_router)    # /products, /categories, /brands (public browsing + seller/admin product management)
+app.include_router(customer_router)   # /cart, /orders, /reviews, /wishlist, /notifications (shopper commerce)
+app.include_router(admin_router)      # /admin/users (platform governance)
 
 
 @app.get("/health", response_model=ApiResponse[dict])

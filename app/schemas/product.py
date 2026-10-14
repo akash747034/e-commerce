@@ -1,6 +1,25 @@
 from decimal import Decimal
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class ProductVariantCreate(BaseModel):
+    sku: Annotated[str, Field(min_length=1, max_length=100)]
+    title: Annotated[str, Field(min_length=1, max_length=100)]
+    price: Decimal | None = None
+    quantity: int = 0
+    attributes: str | None = None
+    is_active: bool = True
+
+
+class ProductVariantUpdate(BaseModel):
+    sku: Annotated[str | None, Field(max_length=100)] = None
+    title: Annotated[str | None, Field(max_length=100)] = None
+    price: Decimal | None = None
+    quantity: int | None = None
+    attributes: str | None = None
+    is_active: bool | None = None
 
 
 class ProductVariantResponse(BaseModel):
@@ -23,6 +42,37 @@ class ProductImageResponse(BaseModel):
     is_primary: bool
 
 
+class ProductCreate(BaseModel):
+    title: Annotated[str, Field(min_length=1, max_length=255)]
+    slug: Annotated[str | None, Field(max_length=255)] = None
+    sku: Annotated[str | None, Field(max_length=100)] = None
+    description: str | None = None
+    price: Annotated[Decimal, Field(gt=0)]
+    compare_at_price: Decimal | None = None
+    quantity: int = 0
+    status: str = "active"
+    is_featured: bool = False
+    category_id: int
+    subcategory_id: int
+    brand_id: int | None = None
+    variants: list[ProductVariantCreate] = []
+
+
+class ProductUpdate(BaseModel):
+    title: Annotated[str | None, Field(max_length=255)] = None
+    slug: Annotated[str | None, Field(max_length=255)] = None
+    sku: Annotated[str | None, Field(max_length=100)] = None
+    description: str | None = None
+    price: Decimal | None = None
+    compare_at_price: Decimal | None = None
+    quantity: int | None = None
+    status: str | None = None
+    is_featured: bool | None = None
+    category_id: int | None = None
+    subcategory_id: int | None = None
+    brand_id: int | None = None
+
+
 class ProductListResponse(BaseModel):
     """Lightweight product schema for list views."""
     model_config = ConfigDict(from_attributes=True)
@@ -39,6 +89,7 @@ class ProductListResponse(BaseModel):
     category_id: int
     subcategory_id: int
     brand_id: int | None
+    seller_id: int | None
 
 
 class ProductDetailResponse(ProductListResponse):
