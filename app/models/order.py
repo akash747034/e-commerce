@@ -160,3 +160,9 @@ class Order(TimestampMixin, Base):
     shipping_address: Mapped["Address"] = relationship(foreign_keys=[shipping_address_id])
     billing_address: Mapped["Address | None"] = relationship(foreign_keys=[billing_address_id])
     coupon: Mapped["Coupon | None"] = relationship()
+    payments: Mapped[list["Payment"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    shipments: Mapped[list["Shipment"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    return_requests: Mapped[list["ReturnRequest"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+    refunds: Mapped[list["Refund"]] = relationship(back_populates="order", cascade="all, delete-orphan")
+
+

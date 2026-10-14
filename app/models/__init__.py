@@ -7,10 +7,14 @@ from app.models.coupon import Coupon, CouponUsage
 from app.models.notification import Notification
 from app.models.order import Order
 from app.models.order_item import OrderItem
+from app.models.payment import Payment
 from app.models.product import Product
 from app.models.product_image import ProductImage
 from app.models.product_variant import ProductVariant
+from app.models.refund import Refund
+from app.models.return_request import ReturnRequest
 from app.models.review import Review
+from app.models.shipment import Shipment
 from app.models.sub_category import SubCategory
 from app.models.user import User
 from app.models.wishlist import WishlistItem
@@ -26,10 +30,14 @@ __all__ = [
     "Notification",
     "Order",
     "OrderItem",
+    "Payment",
     "Product",
     "ProductImage",
     "ProductVariant",
+    "Refund",
+    "ReturnRequest",
     "Review",
+    "Shipment",
     "SubCategory",
     "User",
     "WishlistItem",
