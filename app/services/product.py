@@ -5,16 +5,26 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.models.category import Category
 from app.models.product import Product
+from app.models.product_image import ProductImage
 from app.models.product_variant import ProductVariant
 from app.models.sub_category import SubCategory
 from app.models.user import User
-from app.schemas.product import ProductCreate, ProductUpdate
+from app.schemas.product import (
+    ProductCreate,
+    ProductImageCreate,
+    ProductImageUpdate,
+    ProductUpdate,
+)
 
 
 def _slugify(text: str) -> str:
     cleaned = re.sub(r"[^\w\s-]", "", text.lower()).strip()
     return re.sub(r"[-\s]+", "-", cleaned)
 
+
+# ---------------------------------------------------------------------------
+# Public Storefront Services
+# ---------------------------------------------------------------------------
 
 def list_products(
     db: Session,
@@ -136,9 +146,9 @@ def create_product_scoped(payload: ProductCreate, user: User, db: Session) -> Pr
     """
     Create a product:
     - Automatically attaches seller_id = user.id for sellers
-    - Admin can also create products (seller_id can be user.id or None)
+    - Admin can also create products
+    - Supports initial images and variants
     """
-    # Validate category & subcategory
     cat = db.get(Category, payload.category_id)
     if not cat or not cat.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid category")
@@ -149,7 +159,6 @@ def create_product_scoped(payload: ProductCreate, user: User, db: Session) -> Pr
 
     slug = payload.slug or _slugify(payload.title)
 
-    # Check slug uniqueness if provided
     if slug:
         existing = db.scalars(select(Product).where(Product.slug == slug)).first()
         if existing:
@@ -173,6 +182,16 @@ def create_product_scoped(payload: ProductCreate, user: User, db: Session) -> Pr
     db.add(product)
     db.flush()
 
+    # Add images if provided
+    for img in payload.images:
+        product_image = ProductImage(
+            product_id=product.id,
+            image=img.image,
+            is_primary=img.is_primary,
+        )
+        db.add(product_image)
+
+    # Add variants if provided
     for v in payload.variants:
         variant = ProductVariant(
             product_id=product.id,
@@ -191,9 +210,7 @@ def create_product_scoped(payload: ProductCreate, user: User, db: Session) -> Pr
 
 
 def update_product_scoped(product_id: int, payload: ProductUpdate, user: User, db: Session) -> Product:
-    """
-    Update a product with ownership validation.
-    """
+    """Update a product with ownership validation."""
     product = get_product_scoped(product_id, user, db)
 
     update_data = payload.model_dump(exclude_unset=True)
@@ -206,9 +223,105 @@ def update_product_scoped(product_id: int, payload: ProductUpdate, user: User, d
 
 
 def delete_product_scoped(product_id: int, user: User, db: Session) -> None:
-    """
-    Delete a product with ownership validation.
-    """
+    """Delete a product with ownership validation."""
     product = get_product_scoped(product_id, user, db)
     db.delete(product)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Product Image CRUD Services (Admin & Seller Scoped)
+# ---------------------------------------------------------------------------
+
+def list_product_images(product_id: int, db: Session) -> list[ProductImage]:
+    """List all images for a product."""
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    return list(db.scalars(select(ProductImage).where(ProductImage.product_id == product_id)).all())
+
+
+def add_product_image(
+    product_id: int,
+    payload: ProductImageCreate,
+    user: User,
+    db: Session,
+) -> ProductImage:
+    """Add an image to a product with seller/admin ownership validation."""
+    product = get_product_scoped(product_id, user, db)
+
+    # If this new image is primary, unset previous primary images
+    if payload.is_primary:
+        existing_images = db.scalars(
+            select(ProductImage).where(ProductImage.product_id == product.id, ProductImage.is_primary == True)
+        ).all()
+        for img in existing_images:
+            img.is_primary = False
+
+    product_image = ProductImage(
+        product_id=product.id,
+        image=payload.image,
+        is_primary=payload.is_primary,
+    )
+    db.add(product_image)
+    db.commit()
+    db.refresh(product_image)
+    return product_image
+
+
+def update_product_image(
+    product_id: int,
+    image_id: int,
+    payload: ProductImageUpdate,
+    user: User,
+    db: Session,
+) -> ProductImage:
+    """Update product image (e.g. set as primary or change image URL)."""
+    # Enforce product ownership
+    product = get_product_scoped(product_id, user, db)
+
+    image = db.scalars(
+        select(ProductImage).where(ProductImage.id == image_id, ProductImage.product_id == product.id)
+    ).first()
+    if not image:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product image not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+
+    # If setting to primary, unset others
+    if update_data.get("is_primary") is True:
+        other_images = db.scalars(
+            select(ProductImage).where(
+                ProductImage.product_id == product.id,
+                ProductImage.id != image.id,
+                ProductImage.is_primary == True,
+            )
+        ).all()
+        for other in other_images:
+            other.is_primary = False
+
+    for field, value in update_data.items():
+        setattr(image, field, value)
+
+    db.commit()
+    db.refresh(image)
+    return image
+
+
+def delete_product_image(
+    product_id: int,
+    image_id: int,
+    user: User,
+    db: Session,
+) -> None:
+    """Delete a product image."""
+    product = get_product_scoped(product_id, user, db)
+
+    image = db.scalars(
+        select(ProductImage).where(ProductImage.id == image_id, ProductImage.product_id == product.id)
+    ).first()
+    if not image:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product image not found")
+
+    db.delete(image)
     db.commit()

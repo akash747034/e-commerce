@@ -253,3 +253,77 @@ def cancel_order(order_id: int, reason: str, user: User, db: Session) -> Order:
     return db.scalars(
         select(Order).options(selectinload(Order.items)).where(Order.id == order.id)
     ).first()
+
+
+# ---------------------------------------------------------------------------
+# Admin Order Management Services
+# ---------------------------------------------------------------------------
+
+def list_all_orders_admin(
+    db: Session,
+    status_filter: str | None = None,
+    payment_status: str | None = None,
+    user_id: int | None = None,
+    skip: int = 0,
+    limit: int = 20,
+) -> list[Order]:
+    """Admin: view all orders across all customers with filtering."""
+    query = select(Order).options(selectinload(Order.items))
+
+    if status_filter:
+        query = query.where(Order.status == status_filter)
+    if payment_status:
+        query = query.where(Order.payment_status == payment_status)
+    if user_id:
+        query = query.where(Order.user_id == user_id)
+
+    query = query.order_by(Order.id.desc()).offset(skip).limit(limit)
+    return list(db.scalars(query).all())
+
+
+def get_order_by_id_admin(order_id: int, db: Session) -> Order:
+    """Admin: get any order by ID."""
+    order = db.scalars(
+        select(Order).options(selectinload(Order.items)).where(Order.id == order_id)
+    ).first()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    return order
+
+
+def update_order_status_admin(
+    order_id: int,
+    new_status: str,
+    new_payment_status: str | None,
+    db: Session,
+) -> Order:
+    """Admin: update order status (e.g. processing, shipped, delivered) and payment status."""
+    order = get_order_by_id_admin(order_id, db)
+
+    valid_statuses = {"pending", "confirmed", "processing", "shipped", "delivered", "cancelled"}
+    if new_status not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid order status. Allowed: {', '.join(sorted(valid_statuses))}",
+        )
+
+    # If cancelling, restore stock
+    if new_status == "cancelled" and order.status != "cancelled":
+        for item in order.items:
+            product = db.get(Product, item.product_id)
+            if item.variant_id:
+                variant = db.get(ProductVariant, item.variant_id)
+                if variant:
+                    variant.quantity += item.quantity
+            elif product:
+                product.quantity += item.quantity
+            item.status = "cancelled"
+
+    order.status = new_status
+    if new_payment_status:
+        order.payment_status = new_payment_status
+
+    db.commit()
+    db.refresh(order)
+    return order
+

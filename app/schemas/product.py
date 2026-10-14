@@ -4,6 +4,33 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field
 
 
+# ---------------------------------------------------------------------------
+# Product Image Schemas
+# ---------------------------------------------------------------------------
+
+class ProductImageCreate(BaseModel):
+    image: Annotated[str, Field(min_length=1, max_length=500)]
+    is_primary: bool = False
+
+
+class ProductImageUpdate(BaseModel):
+    image: Annotated[str | None, Field(max_length=500)] = None
+    is_primary: bool | None = None
+
+
+class ProductImageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    product_id: int
+    image: str
+    is_primary: bool
+
+
+# ---------------------------------------------------------------------------
+# Product Variant Schemas
+# ---------------------------------------------------------------------------
+
 class ProductVariantCreate(BaseModel):
     sku: Annotated[str, Field(min_length=1, max_length=100)]
     title: Annotated[str, Field(min_length=1, max_length=100)]
@@ -34,13 +61,9 @@ class ProductVariantResponse(BaseModel):
     is_active: bool
 
 
-class ProductImageResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    image: str
-    is_primary: bool
-
+# ---------------------------------------------------------------------------
+# Product Create / Update / Response Schemas
+# ---------------------------------------------------------------------------
 
 class ProductCreate(BaseModel):
     title: Annotated[str, Field(min_length=1, max_length=255)]
@@ -55,6 +78,7 @@ class ProductCreate(BaseModel):
     category_id: int
     subcategory_id: int
     brand_id: int | None = None
+    images: list[ProductImageCreate] = []       # <-- Support adding images during product creation!
     variants: list[ProductVariantCreate] = []
 
 

@@ -7,6 +7,9 @@ from app.models.user import User
 from app.schemas.product import (
     ProductCreate,
     ProductDetailResponse,
+    ProductImageCreate,
+    ProductImageResponse,
+    ProductImageUpdate,
     ProductListResponse,
     ProductUpdate,
 )
@@ -141,6 +144,94 @@ def delete_product(
     - Admin: can delete any product.
     """
     product_service.delete_product_scoped(product_id=product_id, user=current_user, db=db)
+
+
+# ---------------------------------------------------------------------------
+# Product Images Management Endpoints (Admin & Seller Shared)
+# ---------------------------------------------------------------------------
+
+@router.get("/{product_id}/images", response_model=ApiResponse[list[ProductImageResponse]])
+def list_product_images(product_id: int, db: Session = Depends(get_db)):
+    """List all images for a product."""
+    images = product_service.list_product_images(product_id=product_id, db=db)
+    return ApiResponse(
+        message="Product images retrieved successfully",
+        data=[ProductImageResponse.model_validate(img) for img in images],
+    )
+
+
+@router.post(
+    "/{product_id}/images",
+    response_model=ApiResponse[ProductImageResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+def add_product_image(
+    product_id: int,
+    payload: ProductImageCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_seller),
+):
+    """
+    Add an image to a product.
+    - Seller: can only add to their own products.
+    - Admin: can add to any product.
+    """
+    image = product_service.add_product_image(
+        product_id=product_id,
+        payload=payload,
+        user=current_user,
+        db=db,
+    )
+    return ApiResponse(
+        message="Product image added successfully",
+        data=ProductImageResponse.model_validate(image),
+    )
+
+
+@router.patch("/{product_id}/images/{image_id}", response_model=ApiResponse[ProductImageResponse])
+def update_product_image(
+    product_id: int,
+    image_id: int,
+    payload: ProductImageUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_seller),
+):
+    """
+    Update product image (e.g., set as primary image, change URL).
+    - Seller: can only update their own product's images.
+    - Admin: can update any product's images.
+    """
+    image = product_service.update_product_image(
+        product_id=product_id,
+        image_id=image_id,
+        payload=payload,
+        user=current_user,
+        db=db,
+    )
+    return ApiResponse(
+        message="Product image updated successfully",
+        data=ProductImageResponse.model_validate(image),
+    )
+
+
+@router.delete("/{product_id}/images/{image_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_product_image(
+    product_id: int,
+    image_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin_or_seller),
+):
+    """
+    Delete a product image.
+    - Seller: can only delete their own product's images.
+    - Admin: can delete any product's images.
+    """
+    product_service.delete_product_image(
+        product_id=product_id,
+        image_id=image_id,
+        user=current_user,
+        db=db,
+    )
 
 
 # ---------------------------------------------------------------------------

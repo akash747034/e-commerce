@@ -33,6 +33,7 @@ class OrderResponse(BaseModel):
 
     id: int
     order_number: str
+    user_id: int
     status: str
     subtotal: Decimal               # Sum of line_totals (after product discounts)
     product_discount_total: Decimal  # Total saved via product-level pricing
@@ -52,3 +53,8 @@ class OrderResponse(BaseModel):
 
 class OrderCancel(BaseModel):
     reason: Annotated[str, Field(min_length=1, max_length=255)]
+
+
+class OrderStatusUpdate(BaseModel):
+    status: Annotated[str, Field(min_length=1, max_length=30)]
+    payment_status: Annotated[str | None, Field(max_length=30)] = None
